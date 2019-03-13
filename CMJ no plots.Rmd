@@ -1,0 +1,220 @@
+---
+title: "CMJ no plots"
+author: "Dan Feeney"
+date: "February 6, 2019"
+output: html_document
+---
+
+
+```{r}
+rm(list=ls())
+setwd("C:/Users/Daniel.Feeney/Dropbox (Boa)/2018 BOA Nonlinear Segment Performance/Analysis")
+
+s5 <- read.csv("C:/Users/Daniel.Feeney/Dropbox (Boa)/2018 BOA Nonlinear Segment Performance/Analysis/AllSubResults.csv")
+
+#load bootstrapping package, create functions to calcualte the metrics with a resample
+library(boot)
+library(ggplot2)
+sampleMean <- function(x, d) {
+  return(mean(x[d]))
+}
+
+conInterval_simple <- function(x){
+  err <- qt(0.975, df=length(x) - 1) * sd(x)/sqrt(length(x))
+  return(err)
+}
+
+set.seed(5280)
+```
+
+## Bootstrap the differences somewhat generic function. One for each comparison
+```{r}
+confidenceDifferences_m <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'M' & df$Movement == 'CMJ')
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'CMJ')
+
+  mean_differences <- vector('numeric', 10000)
+
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+
+  mean(mean_differences)
+  conInterval_simple(mean_differences)
+  summary(mean_differences)
+
+
+  return(list(quantile(mean_differences,probs=c(.125,.875)), quantile(mean_differences,probs=c(0.05, 0.95))))
+}
+
+confidenceDifferences_l <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'L' & df$Movement == 'CMJ')
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'CMJ')
+
+  mean_differences <- vector('numeric', 10000)
+
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+
+  mean(mean_differences)
+  conInterval_simple(mean_differences)
+  summary(mean_differences)
+
+  return(list(quantile(mean_differences,probs=c(.125,.875)), quantile(mean_differences,probs=c(0.05, 0.95))))
+}
+
+confidenceDifferences_t <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'T' & df$Movement == 'CMJ')
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'CMJ')
+
+  mean_differences <- vector('numeric', 10000)
+
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+
+  mean(mean_differences)
+  conInterval_simple(mean_differences)
+  summary(mean_differences)
+
+
+  return(list(quantile(mean_differences,probs=c(.125,.875)), quantile(mean_differences,probs=c(0.05, 0.95))))
+}
+
+```
+
+
+# Test Time on FP. Positive difference is a low score, negative is a high score
+## Look at averages for each condition for CMJ
+```{r}
+cmj <- subset(s5, s5$Movement == 'CMJ' & s5$ï..Subject == 4)
+
+tapply(cmj$Time.on.FP, cmj$Condition, FUN = mean)
+tapply(cmj$Time.on.FP, cmj$Condition, FUN = sd)
+
+contactTime <- ggplot(cmj, aes(x = Condition, y = abs(Time.on.FP))) + geom_bar(stat='summary', fun.y='mean') +
+    geom_pointrange(stat = "summary", fun.data = "mean_se",
+                  position = position_dodge(width = 0.9)) 
+contactTime +   theme(axis.text=element_text(size=12),
+                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "Time on FP")
+```
+## For CMJ
+### all three stay 0
+```{r}
+confidenceDifferences_m(cmj, 6, 10000)
+confidenceDifferences_l(cmj, 6, 10000)
+confidenceDifferences_t(cmj, 6, 10000)
+
+```
+
+
+# Test total GRF RFD avg eccentric. Positive differences are (+) Negative (-)
+## Lets start by looking at averages for each condition for Skater and CMJ
+```{r}
+tapply(cmj$Total.GRF.RFD.Avg.Eccentric, cmj$Condition, FUN = mean)
+
+RFD_avg <- ggplot(cmj, aes(x = Condition, y = abs(Total.GRF.RFD.Avg.Eccentric))) + geom_bar(stat='summary', fun.y='mean') +
+    geom_pointrange(stat = "summary", fun.data = "mean_se",
+                  position = position_dodge(width = 0.9)) 
+RFD_avg +   theme(axis.text=element_text(size=12),
+                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "Avg RFD Eccentric")
+```
+
+
+```{r}
+confidenceDifferences_m(cmj, 7, 10000)
+confidenceDifferences_l(cmj, 7, 10000)
+confidenceDifferences_t(cmj, 7, 10000)
+
+```
+
+
+# Test total GRF peak. Positive differences are (+) negative are (-)
+## Lets start by looking at averages for each condition for Skater and CMJ
+```{r}
+tapply(cmj$Total.GRF.Peak, cmj$Condition, FUN = mean)
+
+GRF_peak <- ggplot(cmj, aes(x = Condition, y = abs(Total.GRF.Peak))) + geom_bar(stat='summary', fun.y='mean') +
+    geom_pointrange(stat = "summary", fun.data = "mean_se",
+                  position = position_dodge(width = 0.9)) 
+GRF_peak +   theme(axis.text=element_text(size=12),
+                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "Peak GRF")
+```
+
+### all stay 0
+```{r}
+confidenceDifferences_m(cmj, 8, 10000)
+confidenceDifferences_l(cmj, 8, 10000)
+confidenceDifferences_t(cmj, 8, 10000)
+
+```
+
+
+# Test COM peak power propulsive. Positive are (+) negative are (-)
+## Lets start by looking at averages for each condition for Skater and CMJ
+```{r}
+tapply(cmj$COM.Power.Peak.Propulsive, cmj$Condition, FUN = mean)
+
+Pwr_peak <- ggplot(cmj, aes(x = Condition, y = abs(COM.Power.Peak.Propulsive))) + geom_bar(stat='summary', fun.y='mean') +
+    geom_pointrange(stat = "summary", fun.data = "mean_se",
+                  position = position_dodge(width = 0.9))  
+Pwr_peak +   theme(axis.text=element_text(size=12),
+                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "Peak COM Power Propulsive")
+
+    
+```
+
+
+```{r}
+confidenceDifferences_m(cmj, 9, 1000)
+confidenceDifferences_l(cmj, 9, 1000)
+confidenceDifferences_t(cmj, 9, 1000)
+
+```
+
+# Test COM work eccentric. Positive are (+) negative are (-)
+## Lets start by looking at averages for each condition for Skater and CMJ
+```{r}
+tapply(cmj$COM.Work.Eccentric, cmj$Condition, FUN = mean)
+
+Work_ecc <- ggplot(cmj, aes(x = Condition, y = COM.Work.Eccentric)) + geom_bar(stat='summary', fun.y='mean') +
+    geom_pointrange(stat = "summary", fun.data = "mean_se",
+                  position = position_dodge(width = 0.9)) 
+Work_ecc +   theme(axis.text=element_text(size=12),
+                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "COM Work Eccentric")
+```
+
+
+```{r}
+confidenceDifferences_m(cmj, 10, 10000)
+confidenceDifferences_l(cmj, 10, 10000)
+confidenceDifferences_t(cmj, 10, 10000)
+
+```
+
+# Test COM work propulsive
+## Lets start by looking at averages for each condition for Skater and CMJ
+```{r}
+tapply(cmj$COM.Work.Propulsive, cmj$Condition, FUN = mean)
+
+Work_prop <- ggplot(cmj, aes(x = Condition, y = abs(COM.Work.Propulsive))) + geom_bar(stat='summary', fun.y='mean') +
+    geom_pointrange(stat = "summary", fun.data = "mean_se",
+                  position = position_dodge(width = 0.9)) 
+Work_prop +   theme(axis.text=element_text(size=12),
+                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "COM Work Propulsive")
+```
+
+
+```{r}
+confidenceDifferences_m(cmj, 11, 10000)
+confidenceDifferences_l(cmj, 11, 10000)
+confidenceDifferences_t(cmj, 11, 10000)
+
+```
