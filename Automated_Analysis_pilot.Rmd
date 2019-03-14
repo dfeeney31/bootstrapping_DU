@@ -105,20 +105,32 @@ calc_Category <- function(dat){
   return(valStart)
 }
 
+calc_Category_pos <- function(dat){
+
+  valStart <- 0
+  
+  if (dat$high[1] > 0 && dat$high[2] > 0) {
+    valStart = 2
+  } else if (dat$low[1] > 0 && dat$low[2] > 0) {
+    valStart = 1
+  } else if (dat$low[1] < 0 && dat$low[2] < 0) {
+    valStart = -1
+  } else if (dat$high[1] < 0 && dat$high[2] < 0) {
+    valStart = -2
+  } 
+  
+  return(valStart)
+}
+
 
 ```
 
 
-# Test Time on FP. Positive differences indicate longer time on plate for a config compared with laces.
-## Lets start by looking at averages for each condition for Skater and CMJ
-```{r}
-skate <- subset(s5, s5$Movement == 'Skater')
-
-```
 
 ## For Skater jumps
 ### A difference with a negative magnitude is good, a positive is bad
 ```{r}
+skate <- subset(s5, s5$Movement == 'Skater')
 depVar <- 'TimeonFP'
 no_Subs <- length(unique(skate$Subject))
 
@@ -144,51 +156,73 @@ for (subNo in unique(skate$Subject)) {
   
 }
 
-results <- as.data.frame(cbind(lCategorical_score, mCategorical_score, tCategorical_score, unique(skate$Subject), rep(depVar, no_Subs)))
 
-names(results) <- c('L','M','T','Subject','Var')
+
+results <- as.data.frame(cbind(as.vector(cbind(rep('L',length(lCategorical_score)), rep('M',length(mCategorical_score)), rep('T',length(tCategorical_score)))), as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)), as.vector(rbind(rep(unique(skate$Subject),3)))))
+
+names(results) <- c('Config', 'TimeonFP', 'SubNo')
+results <- results[,c("SubNo", "Config", "TimeonFP")]
 
 ```
 
 
 # Test total GRF RFD avg eccentric. Negative differences indicate lower RFD average for a config compared with laces
-## Lets start by looking at averages for each condition for Skater and CMJ
 ```{r}
-tapply(skate$Total.GRF.RFD.Avg.Eccentric, skate$Condition, FUN = mean)
 
-RFD_avg <- ggplot(skate, aes(x = Condition, y = abs(Total.GRF.RFD.Avg.Eccentric))) + geom_bar(stat='summary', fun.y='mean') +
-    geom_pointrange(stat = "summary", fun.data = "mean_se",
-                  position = position_dodge(width = 0.9)) 
-RFD_avg +   theme(axis.text=element_text(size=12),
-                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "Avg RFD Eccentric")
-```
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
 
 
-```{r}
-confidenceDifferences_m(s5, 7, 10000)
-confidenceDifferences_l(s5, 7, 10000)
-confidenceDifferences_t(s5, 7, 10000)
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 7, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 7, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 7, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
 
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[4] <- c('GRF_RFD_Ecc')
 ```
 
 
 # Test total GRF peak
-## Lets start by looking at averages for each condition for Skater and CMJ
-```{r}
-tapply(skate$Total.GRF.Peak, skate$Condition, FUN = mean)
-
-GRF_peak <- ggplot(skate, aes(x = Condition, y = abs(Total.GRF.Peak))) + geom_bar(stat='summary', fun.y='mean') +
-    geom_pointrange(stat = "summary", fun.data = "mean_se",
-                  position = position_dodge(width = 0.9)) 
-GRF_peak +   theme(axis.text=element_text(size=12),
-                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "Peak GRF")
-```
-
 
 ```{r}
-confidenceDifferences_m(s5, 8, 10000)
-confidenceDifferences_l(s5, 8, 10000)
-confidenceDifferences_t(s5, 8, 10000)
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 8, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 8, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 8, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[5] <- c('Peak_GRF')
 
 ```
 
@@ -196,59 +230,88 @@ confidenceDifferences_t(s5, 8, 10000)
 # Test COM peak power propulsive. Negative means lower peak power than laced
 ## Lets start by looking at averages for each condition for Skater and CMJ
 ```{r}
-tapply(skate$COM.Power.Peak.Propulsive, skate$Condition, FUN = mean)
-
-Pwr_peak <- ggplot(skate, aes(x = Condition, y = abs(COM.Power.Peak.Propulsive))) + geom_bar(stat='summary', fun.y='mean') +
-    geom_pointrange(stat = "summary", fun.data = "mean_se",
-                  position = position_dodge(width = 0.9)) 
-Pwr_peak +   theme(axis.text=element_text(size=12),
-                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "Peak COM Power Propulsive")
-```
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
 
 
-```{r}
-confidenceDifferences_m(s5, 9, 1000)
-confidenceDifferences_l(s5, 9, 1000)
-confidenceDifferences_t(s5, 9, 1000)
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 9, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 9, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 9, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[6] <- c('Peak_pwr_com')
 
 ```
 
 # Test COM work eccentric. Values are negative. Positive difference means less COM work compared with laced (+)
-## Lets start by looking at averages for each condition for Skater and CMJ
-```{r}
-tapply(skate$COM.Work.Eccentric, skate$Condition, FUN = mean)
-
-Work_ecc <- ggplot(skate, aes(x = Condition, y = abs(COM.Work.Eccentric))) + geom_bar(stat='summary', fun.y='mean') +
-    geom_pointrange(stat = "summary", fun.data = "mean_se",
-                  position = position_dodge(width = 0.9)) 
-Work_ecc +   theme(axis.text=element_text(size=12),
-                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "COM Work Eccentric")
-```
-
 
 ```{r}
-confidenceDifferences_m(s5, 10, 1000)
-confidenceDifferences_l(s5, 10, 1000)
-confidenceDifferences_t(s5, 10, 1000)
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 10, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 10, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 10, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[7] <- c('Work_ecc')
 
 ```
 
 # Test COM work propulsive. Negative means less COM work compared with laced. (+)
-## Lets start by looking at averages for each condition for Skater and CMJ
 ```{r}
-tapply(skate$COM.Work.Propulsive, skate$Condition, FUN = mean)
-
-Work_prop <- ggplot(skate, aes(x = Condition, y = abs(COM.Work.Propulsive))) + geom_bar(stat='summary', fun.y='mean') +
-    geom_pointrange(stat = "summary", fun.data = "mean_se",
-                  position = position_dodge(width = 0.9)) 
-Work_prop +   theme(axis.text=element_text(size=12),
-                  axis.title=element_text(size=14,face="bold")) + labs(title="Sub 5",x="Configuration", y = "COM Work Propulsive")
-```
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
 
 
-```{r}
-confidenceDifferences_m(s5, 11, 1000)
-confidenceDifferences_l(s5, 11, 1000)
-confidenceDifferences_t(s5, 11, 1000)
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 11, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 11, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 11, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category(mVals)
+  lCategorical_score[count_var] <- calc_Category(lVals)
+  tCategorical_score[count_var] <- calc_Category(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[8] <- c('Work_prop')
 
 ```
