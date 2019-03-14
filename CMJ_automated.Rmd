@@ -1,0 +1,318 @@
+---
+title: "CMJ automated"
+author: "Dan Feeney"
+date: "February 6, 2019"
+output: html_document
+---
+
+
+```{r}
+rm(list=ls())
+
+s5 <- read.csv("C:/Users/Daniel.Feeney/Dropbox (Boa)/2018 BOA Nonlinear Segment Performance/Analysis/AllSubResults.csv")
+names(s5)[1]<-"Subject"
+
+#load bootstrapping package, create functions to calcualte the metrics with a resample
+library(boot)
+library(ggplot2)
+sampleMean <- function(x, d) {
+  return(mean(x[d]))
+}
+
+conInterval_simple <- function(x){
+  err <- qt(0.975, df=length(x) - 1) * sd(x)/sqrt(length(x))
+  return(err)
+}
+
+set.seed(5280)
+```
+
+## Bootstrap the differences somewhat generic function. One for each comparison
+```{r}
+confidenceDifferences_m <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'M' & df$Movement == 'CMJ')
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'CMJ')
+
+  mean_differences <- vector('numeric', 10000)
+
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+
+  foo <- quantile(mean_differences,probs=c(0.125,0.875))
+  bar <- quantile(mean_differences,probs=c(0.05, 0.95))
+
+  newList <- list("low" = foo, "high" = bar)
+  return(newList)
+}
+
+confidenceDifferences_l <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'L' & df$Movement == 'CMJ')
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'CMJ')
+
+  mean_differences <- vector('numeric', 10000)
+
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+
+  foo <- quantile(mean_differences,probs=c(0.125,0.875))
+  bar <- quantile(mean_differences,probs=c(0.05, 0.95))
+
+  newList <- list("low" = foo, "high" = bar)
+  return(newList)
+}
+
+confidenceDifferences_t <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'T' & df$Movement == 'CMJ')
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'CMJ')
+
+  mean_differences <- vector('numeric', 10000)
+
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+
+  foo <- quantile(mean_differences,probs=c(0.125,0.875))
+  bar <- quantile(mean_differences,probs=c(0.05, 0.95))
+
+  newList <- list("low" = foo, "high" = bar)
+  return(newList)
+}
+
+calc_Category <- function(dat){
+
+  valStart <- 0
+  
+  if (dat$high[1] < 0 && dat$high[2] < 0) {
+    valStart = 2
+  } else if (dat$low[1] < 0 && dat$low[2] < 0) {
+    valStart = 1
+  } else if (dat$low[1] > 0 && dat$low[2] > 0) {
+    valStart = -1
+  } else if (dat$high[1] > 0 && dat$high[2] > 0) {
+    valStart = -2
+  } 
+  
+  return(valStart)
+}
+
+calc_Category_pos <- function(dat){
+
+  valStart <- 0
+  
+  if (dat$high[1] > 0 && dat$high[2] > 0) {
+    valStart = 2
+  } else if (dat$low[1] > 0 && dat$low[2] > 0) {
+    valStart = 1
+  } else if (dat$low[1] < 0 && dat$low[2] < 0) {
+    valStart = -1
+  } else if (dat$high[1] < 0 && dat$high[2] < 0) {
+    valStart = -2
+  } 
+  
+  return(valStart)
+}
+
+
+```
+
+
+# Test Time on FP. Positive difference is a low score, negative is a high score
+```{r}
+cmj <- subset(s5, s5$Movement == 'CMJ')
+no_Subs <- length(unique(cmj$Subject))
+
+mCategorical_score <- numeric(length(unique(cmj$Subject)))
+lCategorical_score <- numeric(length(unique(cmj$Subject)))
+tCategorical_score <- numeric(length(unique(cmj$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(cmj$Subject)) {
+  
+  tmp_sub <- subset(cmj, cmj$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 6, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 6, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 6, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category(mVals)
+  lCategorical_score[count_var] <- calc_Category(lVals)
+  tCategorical_score[count_var] <- calc_Category(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+
+results <- as.data.frame(cbind(as.vector(cbind(rep('L',length(lCategorical_score)), rep('M',length(mCategorical_score)), rep('T',length(tCategorical_score)))), as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)), as.vector(rbind(rep(unique(cmj$Subject),3)))))
+
+names(results) <- c('Config', 'TimeonFP', 'SubNo')
+results <- results[,c("SubNo", "Config", "TimeonFP")]
+
+```
+
+
+# Test total GRF RFD avg eccentric. Positive differences are (+) Negative (-)
+## Lets start by looking at averages for each condition for cmjr and CMJ
+```{r}
+
+mCategorical_score <- numeric(length(unique(cmj$Subject)))
+lCategorical_score <- numeric(length(unique(cmj$Subject)))
+tCategorical_score <- numeric(length(unique(cmj$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(cmj$Subject)) {
+  
+  tmp_sub <- subset(cmj, cmj$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 7, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 7, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 7, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[4] <- c('GRF_RFD_Ecc')
+
+```
+
+
+# Test total GRF peak. Positive differences are (+) negative are (-)
+## Lets start by looking at averages for each condition for cmjr and CMJ
+```{r}
+mCategorical_score <- numeric(length(unique(cmj$Subject)))
+lCategorical_score <- numeric(length(unique(cmj$Subject)))
+tCategorical_score <- numeric(length(unique(cmj$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(cmj$Subject)) {
+  
+  tmp_sub <- subset(cmj, cmj$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 8, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 8, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 8, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[5] <- c('Peak_GRF')
+
+```
+
+
+# Test COM peak power propulsive. Positive are (+) negative are (-)
+## Lets start by looking at averages for each condition for cmjr and CMJ
+```{r}
+mCategorical_score <- numeric(length(unique(cmj$Subject)))
+lCategorical_score <- numeric(length(unique(cmj$Subject)))
+tCategorical_score <- numeric(length(unique(cmj$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(cmj$Subject)) {
+  
+  tmp_sub <- subset(cmj, cmj$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 9, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 9, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 9, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[6] <- c('Peak_pwr_com')
+
+```
+
+# Test COM work eccentric. Positive are (+) negative are (-)
+## Lets start by looking at averages for each condition for cmjr and CMJ
+```{r}
+mCategorical_score <- numeric(length(unique(cmj$Subject)))
+lCategorical_score <- numeric(length(unique(cmj$Subject)))
+tCategorical_score <- numeric(length(unique(cmj$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(cmj$Subject)) {
+  
+  tmp_sub <- subset(cmj, cmj$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 10, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 10, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 10, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[7] <- c('Work_ecc')
+
+```
+
+# Test COM work propulsive
+```{r}
+mCategorical_score <- numeric(length(unique(cmj$Subject)))
+lCategorical_score <- numeric(length(unique(cmj$Subject)))
+tCategorical_score <- numeric(length(unique(cmj$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(cmj$Subject)) {
+  
+  tmp_sub <- subset(cmj, cmj$Subject == subNo)
+  
+  mVals <- confidenceDifferences_m(tmp_sub, 11, 10000)
+  lVals <- confidenceDifferences_l(tmp_sub, 11, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 11, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category(mVals)
+  lCategorical_score[count_var] <- calc_Category(lVals)
+  tCategorical_score[count_var] <- calc_Category(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[8] <- c('Work_prop')
+
+results <- cbind(results, rowSums(results[4:8],))
+names(results)[9] <- c('Total_Score')
+
+tapply(results$Total_Score, results$Config, FUN=mean)
+
+```
