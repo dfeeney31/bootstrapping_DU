@@ -315,4 +315,8 @@ names(results)[9] <- c('Total_Score')
 
 tapply(results$Total_Score, results$Config, FUN=mean)
 
+length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == 'M'))
+length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == 'T'))
+length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == 'L'))
+
 ```

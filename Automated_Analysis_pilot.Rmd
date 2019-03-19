@@ -314,4 +314,13 @@ for (subNo in unique(skate$Subject)) {
 results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
 names(results)[8] <- c('Work_prop')
 
+results <- cbind(results, rowSums(results[4:8],))
+names(results)[9] <- c('Total_Score')
+
+tapply(results$Total_Score, results$Config, FUN=mean)
+
+length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == 'M'))
+length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == 'T'))
+length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == 'L'))
+
 ```
