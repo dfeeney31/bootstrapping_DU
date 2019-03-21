@@ -329,7 +329,7 @@ length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == '
 ```{r}
 
 a <- ggplot(results, aes(x = Total_Score)) + geom_histogram(aes(color = Config, fill = Config), alpha = 0.4, bins = 10) + scale_fill_manual(values = c("#DC582A", "#003D4C", "#00966C")) + scale_color_manual(values = c("#DC582A", "#003D4C", "#00966C")) + theme_classic()
-a
+a + theme_bw()
 
 p <- ggplot(results, aes(x = Config, y = Total_Score)) + geom_boxplot() + geom_dotplot(binaxis='y', stackdir='center', dotsize=1) 
 p + theme_classic()
