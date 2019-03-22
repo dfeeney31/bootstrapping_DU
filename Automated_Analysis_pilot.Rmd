@@ -157,7 +157,6 @@ for (subNo in unique(skate$Subject)) {
 }
 
 
-
 results <- as.data.frame(cbind(as.vector(cbind(rep('L',length(lCategorical_score)), rep('M',length(mCategorical_score)), rep('T',length(tCategorical_score)))), as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)), as.vector(rbind(rep(unique(skate$Subject),3)))))
 
 names(results) <- c('Config', 'TimeonFP', 'SubNo')
