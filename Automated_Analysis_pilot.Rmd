@@ -317,20 +317,20 @@ names(results)[8] <- c('Work_prop')
 results <- cbind(results, rowSums(results[4:8],))
 names(results)[9] <- c('Total_Score')
 
-tapply(results$Total_Score, results$Config, FUN=mean)
+tapply(results$Total_Score, results$Config, FUN=range)
 
 length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == 'M'))
 length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == 'T'))
 length(subset(results$Total_Score, results$Total_Score > 1 & results$Config == 'L'))
 
+write.csv(results, file = 'DU_20subject_summary_skater.csv')
 ```
 
 
 ```{r}
 
 a <- ggplot(results, aes(x = Total_Score)) + geom_histogram(aes(color = Config, fill = Config), alpha = 0.4, bins = 10) + scale_fill_manual(values = c("#DC582A", "#003D4C", "#00966C")) + scale_color_manual(values = c("#DC582A", "#003D4C", "#00966C")) + theme_classic()
-a 
 
 p <- ggplot(results, aes(x = Config, y = Total_Score)) + geom_boxplot() + geom_dotplot(binaxis='y', stackdir='center', dotsize=1) 
-p + theme_classic()
+p + theme_classic() + ylab('Total Categorical Score') + xlab('Configuration') + ggtitle('Skater Jump')
 ```
