@@ -7,6 +7,41 @@ names(dat)[1]<-"Subject"
 skate_total <- subset(dat, dat$Movement == 'Skater')
 cmj_total <- subset(dat, dat$Movement == 'CMJ')
 
+
+#######################
+
+config_avg <- aggregate(skate_total$Time.on.FP ~ skate_total$Subject + skate_total$Condition + skate_total$Movement, data = skate_total, FUN = mean)
+names(config_avg) <- c('Subject', 'Config', 'Movement','TimeonFP')
+config_avg
+
+
+T_differences <- numeric(20)
+M_differences <- numeric(20)
+L_differences <- numeric(20)
+counter <- 1
+for (subNo in unique(config_avg$Subject)) {
+  tmp_var <- subset(config_avg, config_avg$Subject == subNo)
+  T_differences[counter] <- subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'T') - subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'L')
+  M_differences[counter] <- subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'M') - subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'L')
+  L_differences[counter] <- subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'S') - subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'L')
+  
+  counter <- counter +1
+}
+
+diferences_mat <- as.data.frame(cbind(T_differences, M_differences, L_differences))
+avg_diff <- apply(diferences_mat, 2 ,FUN = mean)
+
+results <- as.data.frame(cbind(as.vector(c('T','M','S')), as.vector(cbind(avg_diff[1], avg_diff[2], avg_diff[3]))))
+names(results) <- c('Config', 'DiffToLR')                                        
+
+p<-ggplot(data=results, aes(x=results$Config, y=results$DiffToLR)) +
+  geom_bar(stat="identity")
+p
+########################
+
+
+
+
 # Time on FP
 config_avg <- aggregate(skate_total$Time.on.FP ~ skate_total$Subject + skate_total$Condition + skate_total$Movement, data = skate_total, FUN = mean)
 names(config_avg) <- c('Subject', 'Config', 'Movement','TimeonFP')
@@ -38,31 +73,9 @@ rt_anova = ezANOVA(
 )
 rt_anova$ANOVA
 
-#######################
 
-T_differences <- numeric(20)
-M_differences <- numeric(20)
-L_differences <- numeric(20)
-counter <- 1
-for (subNo in unique(config_avg$Subject)) {
-  tmp_var <- subset(config_avg, config_avg$Subject == subNo)
-  T_differences[counter] <- subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'T') - subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'L')
-  M_differences[counter] <- subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'M') - subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'L')
-  L_differences[counter] <- subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'S') - subset(tmp_var$TimeonFP, tmp_var$Subject == subNo & tmp_var$Config == 'L')
-  
-  counter <- counter +1
-}
 
-diferences_mat <- as.data.frame(cbind(T_differences, M_differences, L_differences))
-avg_diff <- apply(diferences_mat, 2 ,FUN = mean)
-
-results <- as.data.frame(cbind(as.vector(c('T','M','S')), as.vector(cbind(avg_diff[1], avg_diff[2], avg_diff[3]))))
-names(results) <- c('Config', 'DiffToLR')                                        
-
-p<-ggplot(data=results, aes(x=results$Config, y=results$DiffToLR)) +
-  geom_bar(stat="identity")
-p
-########################
+#################################
 skater <- read.csv('C:/Users/Daniel.Feeney/Dropbox (Boa)/2018 BOA Nonlinear Segment Performance/Analysis/DU_20subject_summary_skater.csv')
 cmj <- read.csv('C:/Users/Daniel.Feeney/Dropbox (Boa)/2018 BOA Nonlinear Segment Performance/Analysis/DU_20subject_summary_CMJ.csv')
 
