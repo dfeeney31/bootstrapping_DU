@@ -1,0 +1,331 @@
+---
+title: "Barricade Performance Test Analysis"
+author: "Dan Feeney"
+date: "May 20, 2019"
+output: html_document
+---
+
+```{r}
+rm(list=ls())
+
+s5 <- read.csv("C:/Users/Daniel.Feeney/Dropbox (Boa)/Adidas Barricade Performance Test/Quant Results/AllSubResults.csv")
+
+
+#load bootstrapping package, create functions to calcualte the metrics with a resample
+library(boot)
+library(ggplot2)
+sampleMean <- function(x, d) {
+  return(mean(x[d]))
+}
+
+conInterval_simple <- function(x){
+  err <- qt(0.975, df=length(x) - 1) * sd(x)/sqrt(length(x))
+  return(err)
+}
+
+set.seed(5280)
+```
+
+
+
+## Bootstrap the differences somewhat generic function. One for each comparison
+```{r}
+confidenceDifferences_BS <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'B' & df$Movement == 'AP') #Pick a Boa config
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'AP') #This is the laced config
+
+  mean_differences <- vector('numeric', 10000)
+
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+
+
+  b <- mean(mean_differences <= 0) * 100
+
+  newList <- list("b" = b)
+  return(newList)
+}
+
+confidenceDifferences_BL <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'L' & df$Movement == 'AP') #Boa shroud
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'AP') #This is shroud laceless
+
+  mean_differences <- vector('numeric', 10000)
+
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+
+
+  b <- mean(mean_differences <= 0) * 100
+
+  newList <- list("b" = b)
+  return(newList)
+}
+
+confidenceDifferences_t <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'R' & df$Movement == 'AP') #Shroud laceless
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'AP') #Laced
+
+  mean_differences <- vector('numeric', 10000)
+
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+
+
+  b <- mean(mean_differences <= 0) * 100
+
+  newList <- list("b" = b)
+  return(newList)
+}
+
+calc_Category <- function(dat){
+
+  valStart <- 0
+  
+  if (dat$b > 90) {
+    valStart = 2
+  } else if (dat$b > 75) {
+    valStart = 1
+  } else if (dat$b < 25) {
+    valStart = -1
+  } else if (dat$b < 10) {
+    valStart = -2
+  } 
+  
+  return(valStart)
+}
+
+calc_Category_pos <- function(dat){
+
+  valStart <- 0
+  
+  if (dat$b < 10) {
+    valStart = 2
+  } else if (dat$b < 25) {
+    valStart = 1
+  } else if (dat$b > 75) {
+    valStart = -1
+  } else if (dat$b > 90) {
+    valStart = -2
+  } 
+  
+  return(valStart)
+}
+
+
+```
+
+
+
+## For Skater jumps
+### A difference with a negative magnitude is good, a positive is bad
+```{r}
+skate <- subset(s5, s5$Movement == 'AP')
+depVar <- 'TimeonFP'
+no_Subs <- length(unique(skate$Subject))
+
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_BS(tmp_sub, 6, 10000)
+  lVals <- confidenceDifferences_BL(tmp_sub, 6, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 6, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category(mVals)
+  lCategorical_score[count_var] <- calc_Category(lVals)
+  tCategorical_score[count_var] <- calc_Category(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+
+results <- as.data.frame(cbind(as.vector(cbind(rep('BOA_to_Lace',length(lCategorical_score)), rep('Boa_to_LL',length(mCategorical_score)), rep('DD_to_SD',length(tCategorical_score)))), as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)), as.vector(rbind(rep(unique(skate$Subject),3)))))
+
+names(results) <- c('Config', 'TimeonFP', 'SubNo')
+results <- results[,c("SubNo", "Config", "TimeonFP")]
+
+
+```
+
+
+# Test total GRF RFD avg eccentric. Negative differences indicate lower RFD average for a config compared with laces
+```{r}
+
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_BS(tmp_sub, 7, 10000)
+  lVals <- confidenceDifferences_BL(tmp_sub, 7, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 7, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[4] <- c('GRF_RFD_Ecc')
+```
+
+
+# Test total GRF peak
+
+```{r}
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_BS(tmp_sub, 8, 10000)
+  lVals <- confidenceDifferences_BL(tmp_sub, 8, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 8, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[5] <- c('Peak_GRF')
+
+```
+
+
+# Test COM peak power propulsive. Negative means lower peak power than laced
+## Lets start by looking at averages for each condition for Skater and CMJ
+```{r}
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_BS(tmp_sub, 9, 10000)
+  lVals <- confidenceDifferences_BL(tmp_sub, 9, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 9, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[6] <- c('Peak_pwr_com')
+
+```
+
+# Test COM work eccentric. Values are negative. Positive difference means less COM work compared with laced (+)
+
+```{r}
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_BS(tmp_sub, 10, 10000)
+  lVals <- confidenceDifferences_BL(tmp_sub, 10, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 10, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category_pos(mVals)
+  lCategorical_score[count_var] <- calc_Category_pos(lVals)
+  tCategorical_score[count_var] <- calc_Category_pos(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[7] <- c('Work_ecc')
+
+```
+
+# Test COM work propulsive. Negative means less COM work compared with laced. (+)
+```{r}
+mCategorical_score <- numeric(length(unique(skate$Subject)))
+lCategorical_score <- numeric(length(unique(skate$Subject)))
+tCategorical_score <- numeric(length(unique(skate$Subject)))
+
+
+count_var <- 1
+for (subNo in unique(skate$Subject)) {
+  
+  tmp_sub <- subset(skate, skate$Subject == subNo)
+  
+  mVals <- confidenceDifferences_BS(tmp_sub, 11, 10000)
+  lVals <- confidenceDifferences_BL(tmp_sub, 11, 10000)
+  tVals <- confidenceDifferences_t(tmp_sub, 11, 10000)
+  
+  mCategorical_score[count_var] <- calc_Category(mVals)
+  lCategorical_score[count_var] <- calc_Category(lVals)
+  tCategorical_score[count_var] <- calc_Category(tVals)
+  
+  count_var <- count_var + 1
+  
+}
+
+results <- cbind(results, as.vector(cbind(lCategorical_score, mCategorical_score, tCategorical_score)))
+names(results)[8] <- c('Work_prop')
+
+results <- cbind(results, rowSums(results[4:8],))
+names(results)[9] <- c('Total_Score')
+
+
+write.csv(results, file = 'Performance_testAP_5.csv')
+```
+
+
+```{r}
+
+a <- ggplot(results, aes(x = Total_Score)) + geom_histogram(aes(color = Config, fill = Config), alpha = 0.4, bins = 10) + scale_fill_manual(values = c("#DC582A", "#003D4C", "#00966C")) + scale_color_manual(values = c("#DC582A", "#003D4C", "#00966C")) + theme_classic()
+a
+
+p <- ggplot(results, aes(x = Config, y = Total_Score)) + geom_boxplot() + geom_dotplot(binaxis='y', stackdir='center', dotsize=1) 
+p + theme_classic() + ylab('Total Categorical Score') + xlab('Configuration') + ggtitle('Skater Jump')
+```
