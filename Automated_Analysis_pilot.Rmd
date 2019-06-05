@@ -30,8 +30,8 @@ set.seed(5280)
 ## Bootstrap the differences somewhat generic function. One for each comparison
 ```{r}
 confidenceDifferences_m <- function(df, metric, num_boots) {
-  C1_ap <- subset(df[,metric], df$Condition == 'M' & df$Movement == 'Skater')
-  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'Skater')
+  C1_ap <- subset(df[,metric], df$Condition == 'M')
+  LC_ap <- subset(df[,metric], df$Condition == 'S')
 
   mean_differences <- vector('numeric', 10000)
 
@@ -51,8 +51,8 @@ confidenceDifferences_m <- function(df, metric, num_boots) {
 }
 
 confidenceDifferences_l <- function(df, metric, num_boots) {
-  C1_ap <- subset(df[,metric], df$Condition == 'L' & df$Movement == 'Skater')
-  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'Skater')
+  C1_ap <- subset(df[,metric], df$Condition == 'L')
+  LC_ap <- subset(df[,metric], df$Condition == 'S')
 
   mean_differences <- vector('numeric', 10000)
 
@@ -72,8 +72,8 @@ confidenceDifferences_l <- function(df, metric, num_boots) {
 }
 
 confidenceDifferences_t <- function(df, metric, num_boots) {
-  C1_ap <- subset(df[,metric], df$Condition == 'T' & df$Movement == 'Skater')
-  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'Skater')
+  C1_ap <- subset(df[,metric], df$Condition == 'T')
+  LC_ap <- subset(df[,metric], df$Condition == 'S')
 
   mean_differences <- vector('numeric', 10000)
 
