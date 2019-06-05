@@ -141,3 +141,37 @@ length(subset(cmj$Total_Score, cmj$Total_Score >= 1 & cmj$Config == 'L'))
 length(subset(skater$Total_Score, skater$Total_Score >= 1 & cmj$Config == 'M')) 
 length(subset(skater$Total_Score, skater$Total_Score >= 1 & cmj$Config == 'T')) 
 length(subset(skater$Total_Score, skater$Total_Score >= 1 & cmj$Config == 'L')) 
+
+
+#### Plots for birdbrain ### 
+
+s5 <- read.csv("C:/Users/Daniel.Feeney/Dropbox (Boa)/2018 BOA Nonlinear Segment Performance/Analysis/AllSubResults.csv")
+names(s5)[1]<-"Subject"
+
+confidenceDifferences_m <- function(df, metric, num_boots) {
+  C1_ap <- subset(df[,metric], df$Condition == 'M' & df$Movement == 'CMJ')
+  LC_ap <- subset(df[,metric], df$Condition == 'S' & df$Movement == 'CMJ')
+  
+  mean_differences <- vector('numeric', 10000)
+  
+  for (i in 1:10000) {
+    C1_tmp <- sample(C1_ap, length(C1_ap), replace=TRUE)
+    LC_tmp <- sample(LC_ap, length(C1_ap), replace=TRUE)
+    mean_differences[i] <- mean(C1_tmp - LC_tmp)
+  }
+  
+  foo <- quantile(mean_differences,probs=c(0.125,0.875))
+  bar <- quantile(mean_differences,probs=c(0.05, 0.95))
+  
+  a <- ggplot(data.frame(mean_differences), aes(x=mean_differences)) +
+    geom_histogram(bins = 100) + xlab('Time on FP') + ylab('Count') + theme_classic()
+    
+  b <- mean(mean_differences <= 0) * 100
+  
+  newList <- list("low" = foo, "high" = bar, "b" = b, a)
+  return(newList)
+}
+
+tmp_sub <- subset(s5, s5$Subject == 16)
+mVals <- confidenceDifferences_m(tmp_sub, 6, 10000)
+mVals
