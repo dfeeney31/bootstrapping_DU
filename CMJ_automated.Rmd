@@ -15,14 +15,6 @@ names(s5)[1]<-"Subject"
 #load bootstrapping package, create functions to calcualte the metrics with a resample
 library(boot)
 library(ggplot2)
-sampleMean <- function(x, d) {
-  return(mean(x[d]))
-}
-
-conInterval_simple <- function(x){
-  err <- qt(0.975, df=length(x) - 1) * sd(x)/sqrt(length(x))
-  return(err)
-}
 
 set.seed(5280)
 ```
@@ -41,13 +33,12 @@ confidenceDifferences_m <- function(df, metric, num_boots) {
     mean_differences[i] <- mean(C1_tmp - LC_tmp)
   }
 
-  foo <- quantile(mean_differences,probs=c(0.125,0.875))
-  bar <- quantile(mean_differences,probs=c(0.05, 0.95))
+
   
   
   b <- mean(mean_differences <= 0) * 100
 
-  newList <- list("low" = foo, "high" = bar, "b" = b)
+  newList <- list("b" = b)
   return(newList)
 }
 
@@ -63,12 +54,9 @@ confidenceDifferences_l <- function(df, metric, num_boots) {
     mean_differences[i] <- mean(C1_tmp - LC_tmp)
   }
 
-  foo <- quantile(mean_differences,probs=c(0.125,0.875))
-  bar <- quantile(mean_differences,probs=c(0.05, 0.95))
-  
   b <- mean(mean_differences <= 0) * 100
 
-  newList <- list("low" = foo, "high" = bar, "b" = b)
+  newList <- list("b" = b)
   return(newList)
 }
 
@@ -84,12 +72,10 @@ confidenceDifferences_t <- function(df, metric, num_boots) {
     mean_differences[i] <- mean(C1_tmp - LC_tmp)
   }
 
-  foo <- quantile(mean_differences,probs=c(0.125,0.875))
-  bar <- quantile(mean_differences,probs=c(0.05, 0.95))
   
   b <- mean(mean_differences <= 0) * 100
 
-  newList <- list("low" = foo, "high" = bar, "b" = b)
+  newList <- list("b" = b)
   return(newList)
 }
 
